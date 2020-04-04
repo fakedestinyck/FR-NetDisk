@@ -1,11 +1,29 @@
 <template>
     <div class="home">
-        <img src="../assets/logo.png" alt="FR网盘logo">
+        <img src="../assets/logo.png" alt="FR网盘logo" />
         <h1>
-            欢迎使用FR网盘，一个
+            欢迎使用FR网盘
+            <br />
+            一个
             <span style="font-style: italic;">永不限速</span>
             的网盘
         </h1>
+        <at-button type="primary" size="large" @click="modal1 = true">点我进入</at-button>
+        <at-modal v-model="modal1" :styles="{width: '90%', maxWidth: '520px'}" :mask-closable="false" :show-close="!isLoggingIn">
+            <div slot="header" style="text-align:center;"><span>登陆</span></div>
+            <at-input v-model="username" placeholder="请输入用户名">
+              <template slot="prepend">
+                <i class="icon icon-user"></i>
+              </template>
+            </at-input>
+            <div style="height: 1em;"></div>
+            <at-input v-model="password" placeholder="请输入密码" type="password">
+              <template slot="prepend">
+                <i class="icon icon-lock"></i>
+              </template>
+            </at-input>
+            <div slot="footer"><at-button type="primary" @click="handleLogin" :disabled="isLoginBtnDisabled" :loading="isLoggingIn">登陆</at-button></div>
+        </at-modal>
     </div>
 </template>
 
@@ -20,11 +38,24 @@ export default {
     },
     data() {
         return {
-            key: 1
+            key: 1,
+            modal1: true,
+            username: '',
+            password: '',
+            email: '',
+            isLoggingIn: false
         };
     },
+    computed: {
+        isLoginBtnDisabled() {
+            return this.username.replace(/\ /g,'') === '' || this.password.replace(/\ /g,'') === '' || this.isLoggingIn
+        }
+    },
     methods: {
-        name() {}
+        name() {},
+        handleLogin() {
+            this.isLoggingIn = true
+        },
     }
 };
 </script>
@@ -33,5 +64,14 @@ export default {
 <style scoped lang="scss">
 h1 {
     font-size: 2em;
+    margin-bottom: 2em;
+}
+.at-btn--primary {
+    border-color: #52b2bc;
+    background-color: #52b2bc;
+}
+.at-btn--primary:hover {
+    border-color: #58cbcf;
+    background-color: #58cbcf;
 }
 </style>
