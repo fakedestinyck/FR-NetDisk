@@ -1,0 +1,9 @@
+{
+    "short_name": "FR网盘",
+    "name": "FR网盘",
+    "display": "standalone",
+    "background_color": "#002140",
+    "theme_color": "#002140",
+    "appleMobileWebAppCapable": "yes",
+    "appleMobileWebAppStatusBarStyle": "black"
+}
