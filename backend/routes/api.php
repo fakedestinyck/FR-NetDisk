@@ -17,3 +17,11 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+// 注册相关
+Route::post('register', 'PassportController@register');
+Route::post('register_by_invitation', 'PassportController@register_by_invitation');
+Route::post('login', 'PassportController@login')->name('login');
+Route::post('logout', 'PassportController@logout')->name('logout');
+
+Route::resource('shared','ShareEventController')->middleware('auth:api');

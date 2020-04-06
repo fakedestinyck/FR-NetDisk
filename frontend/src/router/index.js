@@ -11,6 +11,11 @@ const routes = [
     component: Home
   },
   {
+      path: '/shared',
+      name: 'Shared',
+      component: () => import('../views/Shared.vue')
+  },
+  {
     path: '/about',
     name: 'About',
     component: () => import(/* webpackChunkName: "about" */ '../views/About.vue')

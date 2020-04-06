@@ -9,18 +9,18 @@
             的网盘
         </h1>
         <at-button type="primary" size="large" @click="modal1 = true">点我进入</at-button>
-        <at-modal v-model="modal1" :styles="{width: '90%', maxWidth: '520px'}" :mask-closable="false" :show-close="!isLoggingIn">
+        <at-modal v-model="modal1" :styles="{ width: '90%', maxWidth: '520px' }" :mask-closable="false" :show-close="!isLoggingIn">
             <div slot="header" style="text-align:center;"><span>登陆</span></div>
-            <at-input v-model="username" placeholder="请输入用户名">
-              <template slot="prepend">
-                <i class="icon icon-user"></i>
-              </template>
+            <at-input v-model="username" placeholder="请输入用户名" @keyup.enter.native="handleLogin">
+                <template slot="prepend">
+                    <i class="icon icon-user"></i>
+                </template>
             </at-input>
             <div style="height: 1em;"></div>
-            <at-input v-model="password" placeholder="请输入密码" type="password">
-              <template slot="prepend">
-                <i class="icon icon-lock"></i>
-              </template>
+            <at-input v-model="password" placeholder="请输入密码" type="password" @keyup.enter.native="handleLogin">
+                <template slot="prepend">
+                    <i class="icon icon-lock"></i>
+                </template>
             </at-input>
             <div slot="footer"><at-button type="primary" @click="handleLogin" :disabled="isLoginBtnDisabled" :loading="isLoggingIn">登陆</at-button></div>
         </at-modal>
@@ -30,7 +30,8 @@
 <script>
 // @ is an alias to /src
 // import HelloWorld from '@/components/HelloWorld.vue'
-
+// 这个axios是自定义的
+import { axios } from '@/components/axios/api.js';
 export default {
     name: 'Home',
     components: {
@@ -48,14 +49,38 @@ export default {
     },
     computed: {
         isLoginBtnDisabled() {
-            return this.username.replace(/\ /g,'') === '' || this.password.replace(/\ /g,'') === '' || this.isLoggingIn
+            return this.username.replace(/\ /g, '') === '' || this.password.replace(/\ /g, '') === '' || this.isLoggingIn;
         }
     },
     methods: {
         name() {},
         handleLogin() {
-            this.isLoggingIn = true
-        },
+            if (this.username.replace(/\ /g, '') === '' || this.password.replace(/\ /g, '') === '' || this.isLoggingIn) {
+                return false;
+            }
+            this.isLoggingIn = true;
+            axios(
+                'login',
+                'POST',
+                {
+                    username: this.username,
+                    password: this.password
+                }
+            )
+                .then(response => {
+                    let username = response.data.username
+                    let token = response.data.token
+                    this.$cookies.set('username',username)
+                    this.$cookies.set('token',token)
+                    this.$router.push('shared')
+                })
+                .catch(error => {
+                    this.$Message.error(error.status === 406 ? '用户名或密码错误' : error.data ?? '未知错误')
+                })
+                .then(() => {
+                    this.isLoggingIn = false;
+                })
+        }
     }
 };
 </script>
