@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Item extends Model
 {
-    protected $fillable = ['user_id','name','type','father_id','absolute_location'];
+    protected $fillable = ['user_id','name','type','size','parent','absolute_location'];
 
     public function entries()
     {

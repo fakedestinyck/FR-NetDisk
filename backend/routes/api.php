@@ -25,3 +25,5 @@ Route::post('login', 'PassportController@login')->name('login');
 Route::post('logout', 'PassportController@logout')->name('logout');
 
 Route::resource('shared','ShareEventController')->middleware('auth:api');
+Route::resource('disk','ItemController')->middleware('auth:api');
+Route::get('auth/getKey','ItemController@getKey')->middleware('auth:api');

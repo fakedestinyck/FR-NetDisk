@@ -1,24 +1,43 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
-import Home from '../views/Home.vue'
+import Welcome from '../views/Welcome.vue'
+import Shared from '../components/Shared.vue'
+import MyDisk from '../components/MyDisk.vue'
 
 Vue.use(VueRouter)
 
 const routes = [
   {
     path: '/',
-    name: 'Home',
-    component: Home
+    name: 'Welcome',
+    component: Welcome
   },
   {
-      path: '/shared',
-      name: 'Shared',
-      component: () => import('../views/Shared.vue')
+      path: '/home',
+      name: 'Home',
+      component: () => import('../views/Home.vue'),
+      children: [
+          {
+              path: 'shared',
+              name: 'Shared',
+              component: Shared
+          },
+          {
+              path: 'mydisk',
+              name: 'Mydisk',
+              component: MyDisk
+          }
+      ],
+      redirect: '/home/shared'
   },
   {
     path: '/about',
     name: 'About',
     component: () => import(/* webpackChunkName: "about" */ '../views/About.vue')
+  },
+  {
+      path: '*',
+      redirect: '/home'
   }
 ]
 

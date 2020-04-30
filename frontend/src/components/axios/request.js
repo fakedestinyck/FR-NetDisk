@@ -7,18 +7,15 @@ export function req(options) {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
-            timeout: 1000*5
+            timeout: 1000*10
         });
         instance(options)
             .then(response => {
                 resolve(response.data);
             })
             .catch(error => {
-                console.log('axios错误：' + error);
-                reject({
-                    'status': error.response ? error.response.status : '400',
-                    'data': error.response ? error.response.data : error.message
-                });
+                console.log('axios错误：' + error)
+                reject(error.response ? error.response.data : {code: 400, data: error.message});
             })
     });
 }

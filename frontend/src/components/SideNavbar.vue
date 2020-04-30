@@ -4,18 +4,17 @@
         <div @touchmove.prevent>
             <at-menu
                 mode="vertical"
-                active-name="2"
                 width="100%"
                 v-bind:class="{ nav_hide: !showSideNav }"
                 :style="{ height: `${innerHeight}px` }"
                 v-show="!smallScreen || !firstLoad"
             >
                 <img src="../assets/logo_only.png" alt="logo" style="width: 200px;"/>
-                <at-menu-item name="1">
+                <at-menu-item name="1" to="/home/mydisk">
                     <i class="icon icon-home"></i>
                     我的文件
                 </at-menu-item>
-                <at-menu-item name="2">
+                <at-menu-item name="2" to="/home/shared">
                     <i class="icon icon-layers"></i>
                     我分享的
                 </at-menu-item>
@@ -67,6 +66,7 @@ export default {
 <style scoped lang="scss">
 #nav {
     width: 300px;
+    float: left;
 }
 #nav ul {
     height: 100vh;

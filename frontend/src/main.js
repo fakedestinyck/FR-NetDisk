@@ -18,6 +18,9 @@ Object.defineProperties(Vue.prototype, {
     }
 })
 
+
+
+
 Vue.use(AtComponents)
 Vue.use(VueCookies)
 Vue.config.productionTip = false

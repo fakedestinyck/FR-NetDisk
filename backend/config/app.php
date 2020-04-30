@@ -232,4 +232,9 @@ return [
 
     ],
 
+    'cos_secret_id' => env('QCLOUD_SECRETID'),
+    'cos_secret_key' => env('QCLOUD_SECRETKEY'),
+    'cos_bucket' => env('COS_BUCKET'),
+    'cos_region' => env('COS_REGION'),
+
 ];
