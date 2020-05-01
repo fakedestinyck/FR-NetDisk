@@ -22,14 +22,29 @@ class ItemController extends Controller
         } else {
             $path = str_replace('%2F','/',$_GET['path']);
         }
-        $items = Item::where('user_id',auth('api')->user()->id)->where('parent',$path)->get();
+        $items = Item::where('user_id',auth('api')->user()->id)
+            ->where('parent',$path)
+            ->whereNotNull('absolute_location')
+            ->where('absolute_location','!=','')
+            ->where('absolute_location','!=','//')
+            ->get();
         if (count($items) > 0) {
             return response()->success($items);
         }
         // 如果没有文件，判断文件夹为空还是不存在
+        // 如果查询的是根目录，直接返回空数组
+        if ($path == '') {
+            return response()->success([]);
+        }
         $itsParent = substr($path,0,strrpos($path,'/'));
         $itsName = substr(strrchr($path,'/'),1);
-        $itself = Item::where('user_id',auth('api')->user()->id)->where('parent',$itsParent)->where('name',$itsName)->get();
+        $itself = Item::where('user_id',auth('api')->user()->id)
+            ->where('parent',$itsParent)
+            ->whereNotNull('absolute_location')
+            ->where('absolute_location','!=','')
+            ->where('absolute_location','!=','//')
+            ->where('name',$itsName)
+            ->get();
         if (count($itself) > 0) {
             return response()->success($items);
         }
@@ -84,7 +99,8 @@ class ItemController extends Controller
                 'name' => $request->name,
                 'type' => 'folder',
                 'user_id' => auth('api')->user()->id,
-                'parent' => $parent
+                'parent' => $parent,
+                'absolute_location' => '/' . auth('api')->user()->username . $parent . '/' . $request->name
             ]);
         } else {
             $files = $request->input('files');
@@ -182,12 +198,30 @@ class ItemController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param  \App\Item  $item
+     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function destroy(Item $item)
+    public function destroy(Request $request)
     {
-        //
+        if (!$request->has('ids') || !is_array($request->input('ids')) || count($request->input('ids')) == 0) {
+            return response()->error('无效的删除操作E422', 422);
+        }
+//        $items = Item::findOrFail($request->input('ids'));
+        $itemsQuery = Item::whereIn('id',$request->input('ids'));
+        $items = $itemsQuery->get();
+        if (count($items) != count($request->input('ids'))) {
+            return response()->error('一个或多个文件不存在或已被删除', 404);
+        }
+        foreach ($items as $item) {
+            if ($item->user_id != auth('api')->user()->id) {
+                return response()->error('文件权限查询失败，可能是登陆过期，请退出重新登录', 403);
+            }
+        }
+        $itemsQuery->update(['absolute_location' => '']); // 设置为空字符串表示回收站，设置为'//'表示永久删除
+        return response()->success([
+            'msg' => '删除成功',
+            'id' => $request->input('ids')
+        ]);
     }
 
 

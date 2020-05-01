@@ -8,6 +8,7 @@
                         v-for="(path, index) in parentArr"
                         :href="parentArr.length - 1 === index ? '' : 'javascript:void(0)'"
                         @click.native="goOutsideFolder(index)"
+                        :key="index"
                     >
                         {{ path }}
                     </at-breadcrumb-item>
@@ -17,31 +18,118 @@
         </div>
         <input type="file" v-show="false" ref="fileInput" @change="handleUploadFile" multiple />
         <!-- <at-table :columns="columns1" :data="data2" optional></at-table> -->
-        <at-table :columns="tableColumns" :data="myfiles" :height="innerHeight" optional></at-table>
+        <!-- <at-table :columns="tableColumns" :data="myfiles" :height="innerHeight" optional></at-table> -->
+        <a-table :data-source="myfiles" :scroll="{ y: innerHeight }" :pagination="false" rowKey="id" size="middle" :row-selection="fileRowSelection">
+            <a-table-column key="name" title="文件名" data-index="name" :ellipsis="true">
+                <template slot-scope="name, data">
+                    <a-button type="link" icon="folder" size="small" @click="goInsideFolder(name)" v-if="data.type === 'folder'">{{ name }}</a-button>
+                    <a-button type="link" size="small" @click="goInsideFolder(name)" v-else>{{ name }}</a-button>
+                </template>
+            </a-table-column>
+
+            <a-table-column key="size" title="大小" data-index="size" :ellipsis="true">
+                <template slot-scope="size">
+                    <span>{{ size }}</span>
+                </template>
+            </a-table-column>
+            <a-table-column key="created_at" title="上传日期" data-index="created_at" :ellipsis="true" />
+
+            <a-table-column key="action" title="操作" :ellipsis="true">
+                <template slot-scope="text, data">
+                    <span>
+                        <a-button type="primary" size="small" @click="handleShareFiles([data])">分享</a-button>
+                        <a-divider type="vertical" />
+                        <a-button type="danger" size="small" @click="handleDeleteFiles([data])">删除</a-button>
+                    </span>
+                </template>
+            </a-table-column>
+        </a-table>
+
         <div class="add-button-wrapper">
             <transition name="slide-fade">
                 <div class="btn-add-popup-wrapper" v-show="showPopupAddButtons">
-                    <at-button type="primary" icon="icon-folder" circle class="btn-add btn-add-popup" @click="handleAddFolder"></at-button>
-                    <at-button type="primary" icon="icon-file-plus" circle class="btn-add btn-add-popup" @click="chooseFileToUpload"></at-button>
+                    <a-button type="primary" icon="folder-add" shape="circle" class="btn-add btn-add-popup" @click="handleAddFolder"></a-button>
+                    <a-button type="primary" icon="file-add" shape="circle" class="btn-add btn-add-popup" @click="chooseFileToUpload"></a-button>
                 </div>
             </transition>
-            <at-button
+            <a-button
                 type="primary"
-                icon="icon-plus"
-                circle
+                icon="plus"
+                shape="circle"
                 class="btn-add btn-add-main"
                 @click.native.stop="togglePopupAddButtons"
                 :class="{ 'popup-open': showPopupAddButtons }"
-            ></at-button>
+            ></a-button>
         </div>
-        <at-modal v-model="uploadModal" :styles="{ width: '90%', maxWidth: '720px' }" :mask-closable="false" :show-close="uploadFinish">
-            <div slot="header" style="text-align:center;">
-                <span>{{uploadModalHeader}}</span>
+        <at-modal v-model="uploadModal" :styles="{ width: '90%', maxWidth: '720px' }" :mask-closable="false" :show-close="uploadFinish" :closeOnPressEsc="uploadFinish">
+            <div slot="header">
+                <span>{{ uploadModalHeader }}</span>
             </div>
 
-            <at-table :columns="uploadColumns" :data="uploadFilesData" :height="uploadModalTableHeight"></at-table>
+            <a-table :data-source="uploadFilesData" :scroll="{ y: uploadModalTableHeight }" :pagination="false" rowKey="iid" size="middle">
+                <a-table-column key="name" title="文件名" data-index="name" :ellipsis="true">
+                    <template slot-scope="name">
+                        <span>{{ name }}</span>
+                    </template>
+                </a-table-column>
+
+                <a-table-column key="size" title="大小" data-index="size" :ellipsis="true" width="82px">
+                    <template slot-scope="size">
+                        <span>{{ size }}</span>
+                    </template>
+                </a-table-column>
+
+                <a-table-column key="progress" title="进度" data-index="progress" :ellipsis="true" width="232px">
+                    <template slot-scope="progress">
+                        <span>{{ progress }}</span>
+                    </template>
+                </a-table-column>
+            </a-table>
 
             <div slot="footer"><at-button type="primary" @click="uploadModal = false" :disabled="!uploadFinish">关闭</at-button></div>
+        </at-modal>
+
+        <!-- 分享文件modal -->
+        <at-modal
+            v-model="shareModal"
+            :styles="{ width: '90%', maxWidth: '400px' }"
+            :mask-closable="false"
+            :show-close="!requestSharing"
+            :closeOnPressEsc="!requestSharing"
+        >
+            <div slot="header" style="text-align:center;"><span>分享文件</span></div>
+
+            <template v-if="!sharingFinished && !requestSharing">
+                <h3>选择分享到期日期</h3>
+                <a-calendar
+                    :fullscreen="false"
+                    @select="onCalendarSelect"
+                    valueFormat="X"
+                    :disabledDate="setCalendarDisabledDate"
+                    :validRange="[moment(), moment().add(364, 'd')]"
+                />
+            </template>
+            <a-skeleton :loading="requestSharing" v-else active>
+                <div>
+                    <a-result status="error" title="分享失败" sub-title="可以尝试过几分钟重试" v-if="shareLink === ''" />
+                    <a-result status="success" title="分享成功" sub-title="链接:" v-else>
+                        <at-input v-model="shareLink" readonly>
+                            <template slot="prepend">
+                                <i class="icon icon-link"></i>
+                            </template>
+                        </at-input>
+                        <a-button v-if="showCopyButton" type="primary" v-clipboard:copy="shareLink" v-clipboard:success="onCopySuccess" v-clipboard:error="onCopyError">复制并关闭</a-button>
+                    </a-result>
+                </div>
+            </a-skeleton>
+
+            <div slot="footer">
+                <template v-if="!sharingFinished">
+                    <a-button @click="shareModal = false" v-if="!requestSharing" style="margin-right: 10px;">取消</a-button>
+                    <a-button type="primary" icon="link" :loading="requestSharing" @click="shareFiles" :disabled="!selectedShareEndDate">确认分享</a-button>
+                </template>
+                <a-button type="primary" @click="shareModal = false" v-else>关闭</a-button>
+            </div>
         </at-modal>
     </div>
 </template>
@@ -49,48 +137,13 @@
 <script>
 import { axios } from '@/components/axios/api.js';
 import { cos } from '@/components/cos/request.js';
+import moment from 'moment';
 export default {
     name: 'MyDisk',
     components: {},
     data() {
         return {
             innerHeight: 0,
-            tableColumns: [
-                {
-                    title: '文件名',
-                    key: 'name',
-                    render: (h, params) => {
-                        return params.item.type === 'folder'
-                            ? h(
-                                  'AtButton',
-                                  {
-                                      props: {
-                                          type: 'text',
-                                          icon: params.item.type === 'folder' ? 'icon-folder' : ''
-                                      },
-                                      on: {
-                                          click: () => {
-                                              this.goInsideFolder(params.item.name);
-                                          }
-                                      }
-                                  },
-                                  params.item.name
-                              )
-                            : h('Span', {}, params.item.name);
-                    }
-                },
-                {
-                    title: '大小',
-                    key: 'size',
-                    render: (h, params) => {
-                        return params.item.type === 'folder' ? h('Span', {}, '') : h('Span', {}, params.item.size);
-                    }
-                },
-                {
-                    title: '上传时间',
-                    key: 'created_at'
-                }
-            ],
             myfiles: [],
             key: 1,
             token: '',
@@ -104,32 +157,14 @@ export default {
             uploadFinish: false,
             uploadModalTableHeight: 0,
             uploadModalTableWidth: 0,
-            uploadColumns: [
-                {
-                    title: '文件名',
-                    key: 'name'
-                },
-                {
-                    title: '大小',
-                    key: 'size'
-                },
-                {
-                    title: '进度',
-                    key: 'progress',
-                    render: (h, params) => {
-                        return h(
-                            'div',
-                            {
-                                style: {
-                                    width: `${this.uploadModalTableWidth*0.3}px`
-                                }
-                            },
-                            params.item.progress
-                        );
-                    }
-                }
-            ],
-            uploadFilesData: []
+            uploadFilesData: [],
+            shareModal: false,
+            moment,
+            requestSharing: false,
+            sharingFinished: false,
+            selectedShareEndDate: null,
+            shareLink: '',
+            showCopyButton: true
         };
     },
     mounted() {
@@ -146,24 +181,37 @@ export default {
         uploadModalHeader() {
             if (!this.uploadFinish) {
                 if (this.total === 0) {
-                    return '正在等待上传，请勿关闭窗口或浏览器'
+                    return '正在等待上传，请勿关闭窗口或浏览器';
                 } else {
-                    return '正在上传，共' + this.total + '个文件，请勿关闭窗口或浏览器'
+                    return '正在上传，共' + this.total + '个文件，请勿关闭窗口或浏览器';
                 }
             } else {
-                return '上传完成'
+                return '上传完成';
             }
+        },
+        fileRowSelection() {
+            return {
+                onChange: (selectedRowKeys, selectedRows) => {
+                    console.log(`selectedRowKeys: ${selectedRowKeys}`, 'selectedRows: ', selectedRows);
+                },
+                getCheckboxProps: record => ({
+                    props: {
+                        disabled: record.name === 'Disabled User', // Column configuration not to be checked
+                        name: record.name
+                    }
+                })
+            };
         }
     },
     methods: {
         initialize() {
-            this.innerHeight = window.innerHeight - 85 - 38 - 1; // 85是margin，38是breadcrumb的宽度，1是那根分割线
-            this.uploadModalTableHeight = window.innerHeight * 0.5;
-            this.uploadModalTableWidth = window.innerWidth * 0.9 >= 720 ? 720 : window.innerWidth * 0.9
+            this.innerHeight = window.innerHeight - 85 - 38 - 1 - 46; // 85是margin，38是breadcrumb的宽度，1是那根分割线，46是表格头
+            this.uploadModalTableHeight = window.innerHeight * 0.5 - 46;
+            this.uploadModalTableWidth = window.innerWidth * 0.9 >= 720 ? 720 : window.innerWidth * 0.9;
             window.addEventListener('resize', () => {
                 this.$nextTick(() => {
-                    this.innerHeight = window.innerHeight - 85 - 38 - 1;
-                    this.uploadModalTableHeight = window.innerHeight * 0.5;
+                    this.innerHeight = window.innerHeight - 85 - 38 - 1 - 46;
+                    this.uploadModalTableHeight = window.innerHeight * 0.5 - 46;
                     this.uploadModalTableWidth = window.innerWidth * 0.9 >= 720 ? 720 : window.innerWidth * 0.9;
                 });
             });
@@ -182,8 +230,115 @@ export default {
             }
             this.cos_client = cos(this.token);
             this.cos_client.on('list-update', data => {
-                this.lastList = data.list // 记录一下每一次list，不然最后一次上传完成后，检查数据库之后没有办法继续更新table
+                this.lastList = data.list; // 记录一下每一次list，不然最后一次上传完成后，检查数据库之后没有办法继续更新table
                 this.updateUploadModalData(data.list);
+            });
+        },
+        setCalendarDisabledDate(date) {
+            if (!date) {
+                return false;
+            }
+            return date < moment().subtract(1, 'd');
+        },
+        onCalendarSelect(value) {
+            this.selectedShareEndDate = value;
+        },
+        shareFiles() {
+            if (!this.selectedShareEndDate) {
+                return false;
+            }
+            this.requestSharing = true;
+            axios(
+                'shared',
+                'POST',
+                {
+                    ids: this.fileidsToShare,
+                    expired_at: this.selectedShareEndDate
+                },
+                this.token
+            )
+                .then(response => {
+                    this.$Message.success(response.data.msg);
+                    this.shareLink = `${process.env.BASE_URL}/${response.data.data}`;
+                })
+                .catch(error => {
+                    // this.parent = this.lastParent;
+                    this.$Message.error(error.data ?? '遇到未知错误');
+                })
+                .then(() => {
+                    this.sharingFinished = true;
+                    this.requestSharing = false;
+                });
+        },
+        handleShareFiles(files) {
+            if (files.length === 0) {
+                return false;
+            }
+            this.shareLink = '';
+            this.sharingFinished = false;
+            this.shareModal = true;
+            this.selectedShareEndDate = moment().format('X');
+            this.fileidsToShare = files.map(file => {
+                return file.id;
+            });
+        },
+        handleDeleteFiles(files) {
+            let that = this;
+            if (files.length === 0) {
+                return false;
+            }
+            var title = `确认要删除 ${files[0].name} `;
+            if (files.length > 1) {
+                title += `等 ${files.length} 个文件/文件夹吗？`;
+            } else {
+                title += '吗？';
+            }
+            this.$confirm({
+                title: title,
+                content: (h, params) => {
+                    return h(
+                        'div',
+                        {
+                            style: {
+                                color: 'red'
+                            }
+                        },
+                        '文件将在回收站中保存24小时，之后删除操作将不能被撤销！'
+                    );
+                },
+                centered: true,
+                cancelText: '取消',
+                okText: '删除',
+                okType: 'danger',
+                onOk() {
+                    return that.deleteFiles(
+                        files.map(file => {
+                            return file.id;
+                        })
+                    );
+                },
+                onCancel() {}
+            });
+        },
+        deleteFiles(fileids) {
+            return new Promise((resolve, reject) => {
+                axios(
+                    'disk',
+                    'DELETE',
+                    {
+                        ids: fileids
+                    },
+                    this.token
+                )
+                    .then(response => {
+                        this.$Message.success(response.data.msg);
+                        resolve();
+                    })
+                    .catch(error => {
+                        // this.parent = this.lastParent;
+                        this.$Message.error(error.data ?? '遇到未知错误');
+                        resolve();
+                    });
             });
         },
         chooseFileToUpload() {
@@ -195,7 +350,8 @@ export default {
                 return {
                     name: item.Key.replace(/\/.+\//g, ''),
                     size: this.formatSize(item.size),
-                    progress: this.formatProgress(item, index)
+                    progress: this.formatProgress(item, index),
+                    iid: this.toDatabase[index].iid
                 };
             });
         },
@@ -212,10 +368,10 @@ export default {
             switch (state) {
                 case 'success':
                     if (this.toDatabase[index].error) {
-                        return '与数据库校验出错，请在其他文件上传完成后重试'
+                        return '与数据库校验出错，请在其他文件上传完成后重试';
                     }
                     if (this.toDatabase[index].finished) {
-                        return '上传成功'
+                        return '上传成功';
                     }
                     return '正在检查文件完整性';
                     break;
@@ -280,9 +436,9 @@ export default {
             });
         },
         async handleUploadFile(e) {
-            let that = this
+            let that = this;
             let config = {};
-            let height = (await window.innerHeight) * 0.5;
+            let height = (await window.innerHeight) * 0.5 - 46;
             config.Bucket = 'frnetdisk-1251693677';
             config['Region'] = 'ap-shanghai';
             let username = this.getCookies('username');
@@ -319,12 +475,11 @@ export default {
                 });
             }
             if (this.toDatabase.length === 0) {
-                return false
+                return false;
             }
-            
-            
+
             // 显示表格，预填充数据
-            this.uploadFinish = false
+            this.uploadFinish = false;
             this.uploadModal = true;
             // 不重设表格高度，则表格无法正常显示，怀疑是at-ui的bug
             this.uploadModalTableHeight = 200;
@@ -336,19 +491,21 @@ export default {
                 return {
                     name: value.name,
                     size: this.formatSize(value.size),
-                    progress: '等待上传'
+                    progress: '等待上传',
+                    iid: value.iid
                 };
             });
+
             // 先插入数据库
             let res = await this.storeToDatabase(this.toDatabase);
-            if (!(res instanceof Object) || res.msg !== '创建成功'){
+            if (!(res instanceof Object) || res.msg !== '创建成功') {
                 return false;
             }
-            
+
             // 获取返回的id
-            let idDict = res.data
+            let idDict = res.data;
             for (let item of this.toDatabase) {
-                item['id'] = idDict[item['iid']]
+                item['id'] = idDict[item['iid']];
             }
             this.cos_client.uploadFiles(
                 {
@@ -361,25 +518,25 @@ export default {
                     // },
                     onFileFinish: async function(err, data, options) {
                         if (!err) {
-                            let keyIndex = parseInt(options.Index)
-                            let uploadFinalResult = await that.updateToDatabase(that.toDatabase[keyIndex].id, options.Key)
-                            if (!(uploadFinalResult instanceof Object) || uploadFinalResult.msg !== '成功'){
+                            let keyIndex = parseInt(options.Index);
+                            let uploadFinalResult = await that.updateToDatabase(that.toDatabase[keyIndex].id, options.Key);
+                            if (!(uploadFinalResult instanceof Object) || uploadFinalResult.msg !== '成功') {
                                 // 不知为何，最后存absolute_location的时候失败了
-                                that.toDatabase[keyIndex].error = true
+                                that.toDatabase[keyIndex].error = true;
                             } else {
-                                that.toDatabase[keyIndex].finished = true
+                                that.toDatabase[keyIndex].finished = true;
                             }
-                            that.updateUploadModalData(that.lastList)
-                            
-                            var allfinish = true
+                            that.updateUploadModalData(that.lastList);
+
+                            var allfinish = true;
                             for (let i of that.toDatabase) {
                                 if (!i.error && !i.finished) {
-                                    allfinish = false
-                                    break
+                                    allfinish = false;
+                                    break;
                                 }
                             }
                             if (allfinish) {
-                                that.uploadFinish = true
+                                that.uploadFinish = true;
                                 that.getMyFiles();
                             }
                         } else {
@@ -388,7 +545,7 @@ export default {
                     }
                 },
                 function(err, data) {
-                    that.updateUploadModalData(that.lastList)
+                    that.updateUploadModalData(that.lastList);
                 }
             );
         },
@@ -480,6 +637,15 @@ export default {
                     this.$Message.error(error.data);
                 })
                 .then(() => {});
+        },
+        onCopySuccess(e) {
+            this.$Message.success('复制成功！');
+            this.shareModal = false
+        },
+        onCopyError(e) {
+            console.log(e)
+            this.$Message.error('复制失败，请尝试手动复制');
+            this.showCopyButton = false
         }
     }
 };
@@ -517,7 +683,7 @@ export default {
 .at-breadcrumb__item:last-child {
     color: #a6babc;
 }
-::v-deep .at-table__cell > .at-btn--text {
+::v-deep td > .ant-btn-link {
     padding-left: 0;
 }
 .add-button-wrapper {
@@ -531,14 +697,29 @@ export default {
         height: 48px;
         margin-top: 8px;
         transition: all 0.3s ease 0.08s;
-        ::v-deep .at-btn__icon {
+        ::v-deep .anticon {
             font-size: 24px;
+            height: 24px;
+            margin-left: 1px;
+        }
+        ::v-deep .anticon-plus {
+            margin-left: 0;
         }
     }
     .popup-open {
         transform: rotate(-135deg);
         transition: all 0.3s ease 0.08s;
     }
+}
+::v-deep .ant-result-content {
+    padding: 0;
+    background-color: transparent;
+    button {
+        margin-top: 16px;
+    }
+}
+.ant-result {
+    padding: 16px 8px;
 }
 @media screen and (max-width: 1023px) {
     .mydisk {

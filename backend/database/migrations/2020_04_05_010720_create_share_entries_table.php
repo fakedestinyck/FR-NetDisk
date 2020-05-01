@@ -17,7 +17,7 @@ class CreateShareEntriesTable extends Migration
             $table->id();
             $table->integer('item_id');
             $table->integer('share_event_id');
-            $table->string('link');
+            $table->integer('download_times')->default(0);
             $table->timestamps();
         });
     }
