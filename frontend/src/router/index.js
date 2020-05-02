@@ -31,6 +31,11 @@ const routes = [
       redirect: '/home/shared'
   },
   {
+      path: '/shared/:share_event_id/:t/:token',
+      name: 'GetPrivateShare',
+      component: () => import('../views/GetShare.vue'),
+  },
+  {
     path: '/about',
     name: 'About',
     component: () => import(/* webpackChunkName: "about" */ '../views/About.vue')

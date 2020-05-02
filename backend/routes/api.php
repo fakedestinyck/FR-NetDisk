@@ -24,11 +24,8 @@ Route::post('register_by_invitation', 'PassportController@register_by_invitation
 Route::post('login', 'PassportController@login')->name('login');
 Route::post('logout', 'PassportController@logout')->name('logout');
 
-Route::resource('shared','ShareEventController')->middleware('auth:api');
-Route::get('shared/{share_event_id}/{t}/{token}','ShareEventController@show');
-Route::get('shared/{shared}',function(){
-    abort(404);
-});
+Route::resource('shared','ShareEventController', ['except' => ['show']])->middleware('auth:api');
+Route::post('shared/get','ShareEventController@show');
 
 Route::delete('disk','ItemController@destroy')->middleware('auth:api');
 Route::resource('disk','ItemController')->middleware('auth:api');

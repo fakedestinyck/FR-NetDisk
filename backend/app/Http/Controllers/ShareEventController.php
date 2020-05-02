@@ -26,6 +26,16 @@ class ShareEventController extends Controller
         //password_confirmation must be included in this string
     }
 
+    protected function sharedValidator(array $data)
+    {
+        return Validator::make($data, [
+            't' => 'required|regex:/^[0-9]+$/i',
+            'share_event_id' => 'required|regex:/^[0-9]+$/i',
+            'token' => 'required|regex:/^[A-Za-z0-9%]+$/i'
+        ]);
+        //password_confirmation must be included in this string
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -101,24 +111,31 @@ class ShareEventController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param  integer  $share_event_id
-     * @param  integer  $t
-     * @param  string  $token
+     * @param  Request $request
      * @return \Illuminate\Http\Response
      */
-    public function show($share_event_id, $t, $token)
+    public function show(Request $request)
     {
+        $validator = $this->sharedValidator($request->all());
+        if ($validator->fails()) {
+            return response()->error('找不到分享的资源', 404);
+        }
+        $share_event_id = $request->share_event_id;
+        $t = $request->t;
+        $token = $request->token;
         $share_event = ShareEvent::where('id',$share_event_id)->where('updated_at',Carbon::createFromTimestamp($t))->get();
         if (count($share_event) == 0) {
             return response()->error('找不到分享的资源', 404);
         }
 
         $check_result = $this->retrieveShareLink($share_event_id, $share_event[0]['updated_at'], $share_event[0]['user_id'], $token);
-        if (!gettype($check_result) == 'string') {
+        if (gettype($check_result) != 'string') {
             return $check_result;
         }
 
         // 下面是返回所有下载地址
+
+        return response()->success('成功');
     }
 
     /**

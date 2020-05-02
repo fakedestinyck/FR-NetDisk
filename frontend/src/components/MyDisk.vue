@@ -259,7 +259,7 @@ export default {
             )
                 .then(response => {
                     this.$Message.success(response.data.msg);
-                    this.shareLink = `${process.env.BASE_URL}/${response.data.data}`;
+                    this.shareLink = `${process.env.BASE_URL}/shared/${response.data.data}`;
                 })
                 .catch(error => {
                     // this.parent = this.lastParent;
@@ -287,7 +287,7 @@ export default {
             if (files.length === 0) {
                 return false;
             }
-            var title = `确认要删除 ${files[0].name} `;
+            let title = `确认要删除 ${files[0].name} `;
             if (files.length > 1) {
                 title += `等 ${files.length} 个文件/文件夹吗？`;
             } else {
