@@ -2,7 +2,7 @@ import {req} from './request.js';
 
 export function axios(url,method,data,token,params) {
     let options = {
-        url: (process.env.NODE_ENV === 'production' ? 'http://drive.upset.fun:14122/api/' : 'http://frnetdisk.test/api/')+url,
+        url: (process.env.NODE_ENV === 'production' ? 'https://drive.upset.fun:14122/api/' : 'http://frnetdisk.test/api/')+url,
         method: method
     };
     if (data != undefined && Object.keys(data).length > 0) {
