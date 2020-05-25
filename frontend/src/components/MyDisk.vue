@@ -61,7 +61,7 @@
                 :class="{ 'popup-open': showPopupAddButtons }"
             ></a-button>
         </div>
-        <at-modal v-model="uploadModal" :styles="{ width: '90%', maxWidth: '720px' }" :mask-closable="false" :show-close="uploadFinish" :closeOnPressEsc="uploadFinish">
+        <at-modal v-model="uploadModal" :styles="{ width: '90%', maxWidth: '720px' }" :mask-closable="uploadFinish" :show-close="uploadFinish" :closeOnPressEsc="uploadFinish">
             <div slot="header">
                 <span>{{ uploadModalHeader }}</span>
             </div>
@@ -331,6 +331,7 @@ export default {
                     this.token
                 )
                     .then(response => {
+                        this.getMyFiles();
                         this.$Message.success(response.data.msg);
                         resolve();
                     })
